@@ -1,6 +1,6 @@
 defmodule Fettle.HttpCheckerBase do
   @moduledoc """
-  Base module for defining checkers based on an HTTP call.
+  Base module for defining `Fettle.Checker` modules based on an HTTP call.
 
   See `Fettle.HttpChecker` for details.
   """
@@ -125,12 +125,13 @@ end
 
 defmodule Fettle.HttpChecker do
   @moduledoc ~S"""
-  A checker that is healthy depending on the result of an HTTP request.
+  A `Fettle.Checker` that is healthy depending on the result of an HTTP request.
 
   Implements the `Fettle.Checker` behaviour.
 
   Configure in Fettle health-check config as e.g.:
-  ```
+
+  ```elixir
   {
     %{
       name: "my-service-check",
