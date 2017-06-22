@@ -7,6 +7,7 @@ defmodule FettleChecks.Mixfile do
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
+     aliases: [test: "test --no-start"],
      deps: deps()]
   end
 
@@ -19,15 +20,18 @@ defmodule FettleChecks.Mixfile do
   end
 
   # Dependencies can be Hex packages:
-  #
-  #   {:my_dep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:my_dep, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
-  #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [
+      {:fettle, github: "Financial-Times/fettle"},
+      {:poison, "~> 3.1"},
+      {:httpoison, "~> 0.11"},
+      {:plug, "~> 1.3", only: [:test]},
+      {:cowboy, "~> 1.0.0", only: [:test]},
+      {:credo, "~> 0.5", only: [:dev, :test]},
+      {:mix_test_watch, "~> 0.3", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false}
+    ]
   end
 end
