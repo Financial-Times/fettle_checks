@@ -40,6 +40,10 @@ defmodule HttpCheckerTest do
       |> send_resp(401, "POST DENIED")
     end
 
+    match _ do
+      send_resp(conn, 404, "oops")
+    end
+
   end
 
   setup do

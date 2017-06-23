@@ -1,19 +1,15 @@
-# FettleChecks
+# Fettle Checks
 
-**TODO: Add description**
+A small library of health checker implementations for [Fettle](https://github.com/Financial-Times/fettle).
+
+See individual modules for details.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `fettle_checks` to your list of dependencies in `mix.exs`:
+For the latest (and most unstable) version:
 
 ```elixir
 def deps do
-  [{:fettle_checks, "~> 0.1.0"}]
+  [{:fettle_checks, github: "Financial-Times/fettle_checks"}]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/fettle_checks](https://hexdocs.pm/fettle_checks).
-

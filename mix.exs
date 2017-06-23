@@ -8,6 +8,10 @@ defmodule FettleChecks.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      aliases: [test: "test --no-start"],
+     source_url: "https://github.com/Financial-Times/fettle_checks",
+     description: description(),
+     package: package(),
+     docs: docs(),
      deps: deps()]
   end
 
@@ -17,6 +21,24 @@ defmodule FettleChecks.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     [extra_applications: [:logger]]
+  end
+
+  def package do
+    [
+      maintainers: ["Ellis Pritchard"],
+      licenses: ["MIT"],
+      links: %{"Github" => "https://github.com/Financial-Times/fettle_checks"} ]
+  end
+
+  defp description do
+    """
+    A library of health checker implementations for Fettle.
+    """
+  end
+
+  def docs do
+    [main: "readme",
+     extras: ["README.md"]]
   end
 
   # Dependencies can be Hex packages:
