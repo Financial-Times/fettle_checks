@@ -97,7 +97,7 @@ defmodule Fettle.HttpCheckerBase do
         end
       end
 
-      @doc "add `user-agent` header, if not present"
+      @doc "adds a `user-agent` header using `fettle.system_code` config, if not already present"
       def default_headers(headers) do
         case Fettle.HttpCheckerBase.get_header(headers, "user-agent") do
           nil ->
