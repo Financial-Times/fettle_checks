@@ -57,12 +57,24 @@ defmodule HttpCheckerTest do
   end
 
   test "missing required opts" do
-    assert_raise ArgumentError, fn -> Fettle.HttpChecker.check(x: "http://localhost:4000/test") end
+    assert_raise ArgumentError, fn -> Fettle.HttpChecker.init(x: "http://localhost:4000/test") end
+  end
+
+  test "user agent added to headers if not present" do
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", headers: [{"x-api-key", "foo"}])
+    assert {"user-agent", "fettle_checks"} in config.headers
+  end
+
+  test "user agent not added to headers if already present" do
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", headers: [{"x-api-key", "foo"}, {"user-agent", "my-agent"}])
+    assert {"user-agent", "my-agent"} in config.headers
+    refute {"user-agent", "fettle_checks"} in config.headers
   end
 
   test "successful check with all defaults" do
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test")
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test")
+    result = Fettle.HttpChecker.check(config)
 
     assert %Result{status: :ok} = result
 
@@ -87,37 +99,42 @@ defmodule HttpCheckerTest do
 
   test "using status code" do
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", status_code: 200)
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", status_code: 200)
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :ok} = result
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", status_code: 201)
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", status_code: 201)
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :error, message: "Unexpected status code 200."} = result
 
   end
 
   test "using regex body match" do
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", resp_body: ~r/.*OK.*/)
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body: ~r/.*OK.*/)
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :ok} = result
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", resp_body: ~r/.*NOK.*/)
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body: ~r/.*NOK.*/)
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :error, message: "Unexpected response body."} = result
 
   end
 
   test "using exact body match" do
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", resp_body: "GET OK")
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body: "GET OK")
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :ok} = result
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", resp_body: "GET NOK")
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body: "GET NOK")
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :error, message: "Unexpected response body."} = result
 
   end
 
   test "using fun body match" do
-
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", resp_body:
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body:
       fn(_type, body, _opts) ->
         case body do
           "GET OK" -> Result.ok("Match.")
@@ -125,9 +142,11 @@ defmodule HttpCheckerTest do
         end
       end
     )
+
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :ok, message: "Match."} = result
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test", resp_body:
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body:
       fn(_type, body, _opts) ->
         case body do
           "GET OK" -> Result.error("No Match.")
@@ -135,6 +154,8 @@ defmodule HttpCheckerTest do
         end
       end
     )
+
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :error, message: "No Match."} = result
 
   end
@@ -150,12 +171,16 @@ defmodule HttpCheckerTest do
       end
     end
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test",
-      resp_body: {Mod, :doit}, xmatch: "GET OK")
+
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body: {Mod, :doit}, xmatch: "GET OK")
+
+    result = Fettle.HttpChecker.check(config)
+
     assert %Result{status: :ok, message: "Match."} = result
 
-    result = Fettle.HttpChecker.check(url: "http://localhost:4000/test",
-      resp_body: {Mod, :doit}, xmatch: "NOK")
+    config = Fettle.HttpChecker.init(url: "http://localhost:4000/test", resp_body: {Mod, :doit}, xmatch: "NOK")
+
+    result = Fettle.HttpChecker.check(config)
     assert %Result{status: :error, message: "No Match."} = result
   end
 
@@ -170,7 +195,8 @@ defmodule HttpCheckerTest do
         end
       end
 
-      result = CustomChecker.CompareResponse.check(url: "http://localhost:4000/test")
+      config = CustomChecker.CompareResponse.init(url: "http://localhost:4000/test")
+      result = CustomChecker.CompareResponse.check(config)
 
       assert %Result{status: :warn} = result
     end
@@ -181,9 +207,13 @@ defmodule HttpCheckerTest do
         @moduledoc false
         use Fettle.HttpCheckerBase
 
-        def check(opts) do
+        def init(opts) do
           super([{:resp_body, true} | opts]) # ensure that compare_resp_body/4 is called
         end
+
+        # def check(opts) do
+        #   super([{:resp_body, true} | opts]) # ensure that compare_resp_body/4 is called
+        # end
 
         def compare_resp_body("application/json", _body, _expected, _opts) do
           Result.ok("JSON")
@@ -195,10 +225,12 @@ defmodule HttpCheckerTest do
 
       end
 
-      result = CustomChecker.CompareRespBody.check(url: "http://localhost:4000/test")
+      config = CustomChecker.CompareRespBody.init(url: "http://localhost:4000/test")
+      result = CustomChecker.CompareRespBody.check(config)
       assert %Result{status: :warn, message: "NOT JSON"} = result
 
-      result = CustomChecker.CompareRespBody.check(url: "http://localhost:4000/test/json")
+      config = CustomChecker.CompareRespBody.init(url: "http://localhost:4000/test/json")
+      result = CustomChecker.CompareRespBody.check(config)
       assert %Result{status: :ok, message: "JSON"} = result
     end
   end

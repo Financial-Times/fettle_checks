@@ -5,15 +5,15 @@ defmodule Fettle.HttpCheckerBase do
   See `Fettle.HttpChecker` for details.
   """
 
-  @callback compare_response(response :: HTTPPoison.Response.t, opts :: Keyword.t) :: Result.t
-  @callback compare_resp_body(content_type :: String.t, body :: String.t, expected :: any, opts :: Keyword.t) :: Result.t
+  @callback compare_response(response :: HTTPPoison.Response.t, config :: map) :: Result.t
+  @callback compare_resp_body(content_type :: String.t, body :: String.t, expected :: any, config :: map) :: Result.t
   @optional_callbacks compare_response: 2, compare_resp_body: 4
 
-  @doc "Get a header from a keyword-like list (but with string keys)."
+  @doc "Get a header from a keyword-like list (but with string keys), returning header value or `nil` if not found."
   @spec get_header(headers :: [{String.t, String.t}], key :: String.t) :: String.t | nil
   def get_header(headers, key) when is_list(headers) do
     case :lists.keyfind(key, 1, headers) do
-      {_, content_type} -> content_type
+      {_, value} -> value
       false -> nil
     end
   end
@@ -39,40 +39,40 @@ defmodule Fettle.HttpCheckerBase do
 
       alias Fettle.Checker.Result
 
-      @options [ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000, hackney: [pool: Fettle.Checker]]
+      @poison_options ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000, hackney: [pool: Fettle.Checker]
 
       @doc "compare the HTTP response and compute a `Fettle.Checker.Result`"
-      @spec compare_response(resp :: HTTPoison.Response.t, opts :: Keyword.t) :: Result.t
-      def compare_response(response, opts)
+      @spec compare_response(resp :: HTTPoison.Response.t, config :: map) :: Result.t
+      def compare_response(response, config)
 
-      def compare_response(resp = %HTTPoison.Response{status_code: status_code}, opts) do
-        expected_status = opts[:status_code] || 200
+      def compare_response(resp = %HTTPoison.Response{status_code: status_code}, config) do
+        expected_status = config.status_code
 
         case Fettle.HttpCheckerBase.expected_status_code?(status_code, expected_status) do
           true ->
-            run_compare_response_body(opts[:resp_body], resp, opts)
+            run_compare_response_body(config.resp_body, resp, config)
           false ->
             Result.error("Unexpected status code #{status_code}.")
         end
       end
 
       @doc "choses the method used to compare the response body and executes it"
-      @spec run_compare_response_body(resp_body_opt :: any, resp :: HTTPoison.Response.t, opts :: Keyword.t) :: Result.t
-      def run_compare_response_body(resp_body_opt, resp, opts)
+      @spec run_compare_response_body(resp_body_opt :: any, resp :: HTTPoison.Response.t, config :: map) :: Result.t
+      def run_compare_response_body(resp_body_opt, resp, config)
 
-      def run_compare_response_body(nil, _resp, _opts), do: Result.ok()
-      def run_compare_response_body(false, _resp, _opts), do: Result.ok()
-      def run_compare_response_body(fun, %HTTPoison.Response{headers: headers, body: body}, opts) when is_function(fun, 3) do
+      def run_compare_response_body(nil, _resp, _config), do: Result.ok()
+      def run_compare_response_body(false, _resp, _config), do: Result.ok()
+      def run_compare_response_body(fun, %HTTPoison.Response{headers: headers, body: body}, config) when is_function(fun, 3) do
         content_type = Fettle.HttpCheckerBase.get_header(headers, "content-type")
-        fun.(content_type, body, opts)
+        fun.(content_type, body, config)
       end
-      def run_compare_response_body({mod, fun}, %HTTPoison.Response{headers: headers, body: body}, opts) when is_atom(mod) and is_atom(fun) do
+      def run_compare_response_body({mod, fun}, %HTTPoison.Response{headers: headers, body: body}, config) when is_atom(mod) and is_atom(fun) do
         content_type = Fettle.HttpCheckerBase.get_header(headers, "content-type")
-        apply(mod, fun, [content_type, body, opts])
+        apply(mod, fun, [content_type, body, config])
       end
-      def run_compare_response_body(expected_body, %HTTPoison.Response{headers: headers, body: body}, opts) do
+      def run_compare_response_body(expected_body, %HTTPoison.Response{headers: headers, body: body}, config) do
         content_type = Fettle.HttpCheckerBase.get_header(headers, "content-type")
-        compare_resp_body(content_type, body, expected_body, opts)
+        compare_resp_body(content_type, body, expected_body, config)
       end
 
       @doc """
@@ -80,38 +80,53 @@ defmodule Fettle.HttpCheckerBase do
 
       Supported types for `expected_body` are: `String` or `Regex`, extensions of this module may implement others.
       """
-      @spec compare_resp_body(content_type :: String.t, body :: String.t, expected_body :: any, opts :: Keyword.t) :: Result.t
-      def compare_resp_body(content_type, body, expected_body, opts)
+      @spec compare_resp_body(content_type :: String.t, body :: String.t, expected_body :: any, config :: map) :: Result.t
+      def compare_resp_body(content_type, body, expected_body, config)
 
-      def compare_resp_body(_, body, expected_body, _opts) when is_binary(body) and is_binary(expected_body) do
+      def compare_resp_body(_, body, expected_body, _config) when is_binary(body) and is_binary(expected_body) do
         case String.equivalent?(body, expected_body) do
           true -> Result.ok()
           false -> Result.error("Unexpected response body.")
         end
       end
 
-      def compare_resp_body(_, body, regex = %Regex{}, _opts) when is_binary(body) do
+      def compare_resp_body(_, body, regex = %Regex{}, _config) when is_binary(body) do
         case Regex.match?(regex, body) do
           true -> Result.ok()
           false -> Result.error("Unexpected response body.")
         end
       end
 
+      @doc "add `user-agent` header, if not present"
+      def default_headers(headers) do
+        case Fettle.HttpCheckerBase.get_header(headers, "user-agent") do
+          nil ->
+            system_code = Application.get_env(:fettle, :system_code, "fettle")
+            [{"user-agent", system_code} | headers]
+          _ -> headers
+        end
+      end
+
+      @doc "check options and transform into a map, applying defaults as necessary"
+      def init(opts) do
+        opts[:url] || raise ArgumentError, "#{__MODULE__} Need check :url"
+
+        config = Enum.into(opts, %{headers: [], method: "GET", req_body: "", status_code: 200, poison: [], resp_body: nil})
+
+        headers = default_headers(config.headers)
+
+        %{config | poison: config.poison ++ @poison_options, headers: headers}
+      end
+
       @doc "Call an HTTP(S) end-point and assert a response code/response body and return a `Fettle.Checker.Response`"
       @impl true
-      def check(opts) do
-        url = opts[:url] || raise ArgumentError, "#{__MODULE__} Need check :url"
-        headers = opts[:headers] || []
-        method = opts[:method] || "GET"
-        req_body = opts[:req_body] || ""
-        status_code = opts[:status_code] || 200
-        poison_opts = (opts[:poison] || []) ++ @options
+      def check(config = %{method: method, url: url, req_body: req_body, headers: headers, poison: poison_opts}) do
 
         result = HTTPoison.request(method, url, req_body, headers, poison_opts)
 
         case result do
           {:ok, resp = %HTTPoison.Response{}} ->
-            compare_response(resp, opts)
+            compare_response(resp, config)
 
           {:error, %HTTPoison.Error{reason: reason}} ->
             Result.error(inspect reason)
@@ -137,9 +152,9 @@ defmodule Fettle.HttpChecker do
       name: "my-service-check",
       panic_guide_url: "...",
       ...
+      checker: Fettle.HttpChecker,
+      args: [url: "http://my-service.com/endpoint", method: "POST", req_body: body(), status_code: 200..202, resp_body: ~r/.*xy??y.*/]
     },
-    Fettle.HttpChecker,
-    [url: "http://my-service.com/endpoint", method: "POST", req_body: body(), status_code: 200..202, resp_body: ~r/.*xy??y.*/]
   }
   ```
 
@@ -155,13 +170,13 @@ defmodule Fettle.HttpChecker do
   | `status_code` | `non_neg_integer \| Range.t \| [non_neg_integer \| Range.t]` | Status code to match | `200` |
   | `resp_body` | any | Expected response body | `false` (don't care) |
 
-  ## Specifying the response body
+  ## Specifying the expected response body
 
   The supported values for `resp_body` are:
     * `String` - exact value of body (comparison via `String.equivalent?/2`).
     * `Regex` - a regex to use to match the body.
-    *  `function/3` - called passing content-type header, body and options; returning `Fettle.Checker.Result`.
-    * `{module, function}` - called passing content-type header, body and options; returning `Fettle.Checker.Result`.
+    *  `function/3` - called passing content-type header, body and options map; returning `Fettle.Checker.Result`.
+    * `{module, function}` - called passing content-type header, body and options map; returning `Fettle.Checker.Result`.
 
   Simple customization can be performed by using the function or module `resp_body` options.
 
@@ -176,7 +191,7 @@ defmodule Fettle.HttpChecker do
   defmodule MyResponseChecker do
     use Fettle.HttpCheckerBase
 
-    def compare_response(resp = %HTTPoison.Response{}, opts) do
+    def compare_response(resp = %HTTPoison.Response{}, config) do
       # your implementation
     end
   end
@@ -187,18 +202,19 @@ defmodule Fettle.HttpChecker do
 
   Note that if you are overriding only `compare_resp_body/4`, you *must* provide a value for the `resp_body` option,
   else it will be skipped by the default implementation of `compare_response/2`. You can do this robustly by also
-  overriding `check/1` to pass a truthy value and calling `super`:
+  overriding `init/1` to pass a truthy value for the `resp_body` opt, and calling `super`:
 
   ```
   defmodule JsonBodyChecker do
     use Fettle.HttpCheckerBase
-    def check(opts), do: super([{:resp_body, true} | opts])
-    def compare_resp_body("application/json", body, true, opts) do
+    def init(opts), do: super([{:resp_body, true} | opts])
+    def compare_resp_body("application/json", body, true, config) do
       # your implementation
     end
   end
 
-  The `checker/1` argument `opts` are all passed through to the lower-level functions, so you can add your own.
+  The result of the `init/1` function is a map with all keys from the `opts` argument; this is passed through to the lower-level functions
+  as `config`, so you can add your own parameters for these functions.
   """
 
   use Fettle.HttpCheckerBase
