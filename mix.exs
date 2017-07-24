@@ -45,15 +45,17 @@ defmodule FettleChecks.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:fettle, github: "Financial-Times/fettle"},
+      # {:fettle, github: "Financial-Times/fettle"},
+      {:fettle, "~> 0.1"},
       {:poison, "~> 3.1"},
       {:httpoison, "~> 0.11"},
       {:plug, "~> 1.3", only: [:test]},
-      {:cowboy, "~> 1.0.0", only: [:test]},
+      {:cowboy, "~> 1.0", only: [:test]},
       {:credo, "~> 0.5", only: [:dev, :test]},
       {:mix_test_watch, "~> 0.3", only: :dev, runtime: false},
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false}
+      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
+      {:inch_ex, ">= 0.0.0", only: :docs}
     ]
   end
 end
