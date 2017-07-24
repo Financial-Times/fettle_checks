@@ -212,6 +212,7 @@ defmodule Fettle.HttpChecker do
       # your implementation
     end
   end
+  ```
 
   The result of the `init/1` function is a map with all keys from the `opts` argument; this is passed through to the lower-level functions
   as `config`, so you can add your own parameters for these functions.
