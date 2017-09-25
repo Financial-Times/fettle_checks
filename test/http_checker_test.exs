@@ -72,11 +72,11 @@ defmodule HttpCheckerTest do
   end
 
   test "merge poison opts" do
-    opts = Fettle.HttpChecker.default_poison_opts([])
+    opts = Fettle.HttpChecker.default_httpoison_opts([])
     assert opts[:hackney] == [pool: Fettle.Checker, timeout: 10_000]
     assert opts[:recv_timeout] == 2000
 
-    opts = Fettle.HttpChecker.default_poison_opts([recv_timeout: 5000, hackney: [timeout: 2000]])
+    opts = Fettle.HttpChecker.default_httpoison_opts([recv_timeout: 5000, hackney: [timeout: 2000]])
     assert opts[:hackney] == [pool: Fettle.Checker, timeout: 2000]
     assert opts[:recv_timeout] == 5000
   end

@@ -39,7 +39,7 @@ defmodule Fettle.HttpCheckerBase do
 
       alias Fettle.Checker.Result
 
-      @poison_options ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000
+      @httpoison_options ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000
       @hackney_options [pool: Fettle.Checker, timeout: 10_000]
 
       @doc "compare the HTTP response and compute a `Fettle.Checker.Result`"
@@ -108,14 +108,14 @@ defmodule Fettle.HttpCheckerBase do
         end
       end
 
-      @doc "merges default poison options with `poison` options specified in config."
-      def default_poison_opts(poison_opts) do
-        hackney_opts = default_hackney_opts(poison_opts[:hackney] || [])
-        poison_opts = Keyword.merge(@poison_options, poison_opts)
-        Keyword.put(poison_opts, :hackney, hackney_opts)
+      @doc "merges default `HTTPoison` options with `httpoison` options specified in config."
+      def default_httpoison_opts(httpoison_opts) do
+        hackney_opts = default_hackney_opts(httpoison_opts[:hackney] || [])
+        httpoison_opts = Keyword.merge(@httpoison_options, httpoison_opts)
+        Keyword.put(httpoison_opts, :hackney, hackney_opts)
       end
 
-      @doc "merges default poison hackney options with `poison[:hackney]` options specified in config."
+      @doc "merges default `HTTPoison` hackney options with `httpoison[:hackney]` options specified in config."
       def default_hackney_opts(hackney_opts) do
         Keyword.merge(@hackney_options, hackney_opts)
       end
@@ -124,18 +124,18 @@ defmodule Fettle.HttpCheckerBase do
       def init(opts) do
         opts[:url] || raise ArgumentError, "#{__MODULE__} Need check :url"
 
-        config = Enum.into(opts, %{headers: [], method: "GET", req_body: "", status_code: 200, poison: [], resp_body: nil})
+        config = Enum.into(opts, %{headers: [], method: "GET", req_body: "", status_code: 200, httpoison: [], resp_body: nil})
 
         headers = default_headers(config.headers)
 
-        %{config | poison: default_poison_opts(config.poison), headers: headers}
+        %{config | httpoison: default_httpoison_opts(config.httpoison), headers: headers}
       end
 
       @doc "Call an HTTP(S) end-point and assert a response code/response body and return a `Fettle.Checker.Response`"
       @impl true
-      def check(config = %{method: method, url: url, req_body: req_body, headers: headers, poison: poison_opts}) do
+      def check(config = %{method: method, url: url, req_body: req_body, headers: headers, httpoison: httpoison_opts}) do
 
-        result = HTTPoison.request(method, url, req_body, headers, poison_opts)
+        result = HTTPoison.request(method, url, req_body, headers, httpoison_opts)
 
         case result do
           {:ok, resp = %HTTPoison.Response{}} ->
@@ -179,7 +179,7 @@ defmodule Fettle.HttpChecker do
   | `headers` | `{String.t, String.t}` | Headers to pass to request | `[]` |
   | `method` | `String.t` | HTTP method | `"GET"`  |
   | `req_body` | `String.t` | Body to send with POST, PUT | `""` |
-  | `poison` | `list` | Additional options for `HTTPoison.request/5` | `[]` |
+  | `httpoison` | `Keyword.t` | Additional options for `HTTPoison.request/5` | `[]` |
   | `status_code` | `non_neg_integer \| Range.t \| [non_neg_integer \| Range.t]` | Status code to match | `200` |
   | `resp_body` | any | Expected response body | `false` (don't care) |
 
