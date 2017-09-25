@@ -39,7 +39,8 @@ defmodule Fettle.HttpCheckerBase do
 
       alias Fettle.Checker.Result
 
-      @poison_options ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000, hackney: [pool: Fettle.Checker]
+      @poison_options ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000
+      @hackney_options [pool: Fettle.Checker, timeout: 10_000]
 
       @doc "compare the HTTP response and compute a `Fettle.Checker.Result`"
       @spec compare_response(resp :: HTTPoison.Response.t, config :: map) :: Result.t
@@ -107,6 +108,18 @@ defmodule Fettle.HttpCheckerBase do
         end
       end
 
+      @doc "merges default poison options with `poison` options specified in config."
+      def default_poison_opts(poison_opts) do
+        hackney_opts = default_hackney_opts(poison_opts[:hackney] || [])
+        poison_opts = Keyword.merge(@poison_options, poison_opts)
+        Keyword.put(poison_opts, :hackney, hackney_opts)
+      end
+
+      @doc "merges default poison hackney options with `poison[:hackney]` options specified in config."
+      def default_hackney_opts(hackney_opts) do
+        Keyword.merge(@hackney_options, hackney_opts)
+      end
+
       @doc "check options and transform into a map, applying defaults as necessary"
       def init(opts) do
         opts[:url] || raise ArgumentError, "#{__MODULE__} Need check :url"
@@ -115,7 +128,7 @@ defmodule Fettle.HttpCheckerBase do
 
         headers = default_headers(config.headers)
 
-        %{config | poison: config.poison ++ @poison_options, headers: headers}
+        %{config | poison: default_poison_opts(config.poison), headers: headers}
       end
 
       @doc "Call an HTTP(S) end-point and assert a response code/response body and return a `Fettle.Checker.Response`"

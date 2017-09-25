@@ -71,6 +71,16 @@ defmodule HttpCheckerTest do
     refute {"user-agent", "fettle_checks"} in config.headers
   end
 
+  test "merge poison opts" do
+    opts = Fettle.HttpChecker.default_poison_opts([])
+    assert opts[:hackney] == [pool: Fettle.Checker, timeout: 10_000]
+    assert opts[:recv_timeout] == 2000
+
+    opts = Fettle.HttpChecker.default_poison_opts([recv_timeout: 5000, hackney: [timeout: 2000]])
+    assert opts[:hackney] == [pool: Fettle.Checker, timeout: 2000]
+    assert opts[:recv_timeout] == 5000
+  end
+
   test "successful check with all defaults" do
 
     config = Fettle.HttpChecker.init(url: "http://localhost:4000/test")
