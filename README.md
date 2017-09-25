@@ -13,7 +13,7 @@ For the stable version:
 ```elixir
 def deps do
   [
-    {:fettle_checks, "~> 0.1"}
+    {:fettle_checks, "~> 0.2"}
   ]
 end
 ```
