@@ -29,5 +29,4 @@ use Mix.Config
 #
 #     import_config "#{Mix.env}.exs"
 
-config :fettle,
-  system_code: "fettle_checks"
+config :fettle, system_code: "fettle_checks"

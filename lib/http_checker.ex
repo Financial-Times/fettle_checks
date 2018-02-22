@@ -5,12 +5,17 @@ defmodule Fettle.HttpCheckerBase do
   See `Fettle.HttpChecker` for details.
   """
 
-  @callback compare_response(response :: HTTPPoison.Response.t, config :: map) :: Result.t
-  @callback compare_resp_body(content_type :: String.t, body :: String.t, expected :: any, config :: map) :: Result.t
+  @callback compare_response(response :: HTTPPoison.Response.t(), config :: map) :: Result.t()
+  @callback compare_resp_body(
+              content_type :: String.t(),
+              body :: String.t(),
+              expected :: any,
+              config :: map
+            ) :: Result.t()
   @optional_callbacks compare_response: 2, compare_resp_body: 4
 
   @doc "Get a header from a keyword-like list (but with string keys), returning header value or `nil` if not found."
-  @spec get_header(headers :: [{String.t, String.t}], key :: String.t) :: String.t | nil
+  @spec get_header(headers :: [{String.t(), String.t()}], key :: String.t()) :: String.t() | nil
   def get_header(headers, key) when is_list(headers) do
     case :lists.keyfind(key, 1, headers) do
       {_, value} -> value
@@ -19,16 +24,26 @@ defmodule Fettle.HttpCheckerBase do
   end
 
   @typedoc "ways of specifing a status code"
-  @type status_code_spec :: non_neg_integer | Range.t
+  @type status_code_spec :: non_neg_integer | Range.t()
 
   @doc "test a status code against a range, value or list of range or value"
-  @spec expected_status_code?(status_code :: non_neg_integer, expected :: status_code_spec | [status_code_spec]) :: boolean
+  @spec expected_status_code?(
+          status_code :: non_neg_integer,
+          expected :: status_code_spec | [status_code_spec]
+        ) :: boolean
   def expected_status_code?(status_code, expected_spec) when is_integer(status_code) do
     case expected_spec do
-      range = %Range{} -> status_code in range
-      code when is_integer(code) -> status_code == code
-      [spec | specs] -> expected_status_code?(status_code, spec) || expected_status_code?(status_code, specs)
-      [] -> false
+      range = %Range{} ->
+        status_code in range
+
+      code when is_integer(code) ->
+        status_code == code
+
+      [spec | specs] ->
+        expected_status_code?(status_code, spec) || expected_status_code?(status_code, specs)
+
+      [] ->
+        false
     end
   end
 
@@ -39,11 +54,11 @@ defmodule Fettle.HttpCheckerBase do
 
       alias Fettle.Checker.Result
 
-      @httpoison_options ssl: [{:versions, [:'tlsv1.2']}], recv_timeout: 2000
+      @httpoison_options ssl: [{:versions, [:"tlsv1.2"]}], recv_timeout: 2000
       @hackney_options [pool: Fettle.Checker, timeout: 10_000]
 
       @doc "compare the HTTP response and compute a `Fettle.Checker.Result`"
-      @spec compare_response(resp :: HTTPoison.Response.t, config :: map) :: Result.t
+      @spec compare_response(resp :: HTTPoison.Response.t(), config :: map) :: Result.t()
       def compare_response(response, config)
 
       def compare_response(resp = %HTTPoison.Response{status_code: status_code}, config) do
@@ -52,26 +67,48 @@ defmodule Fettle.HttpCheckerBase do
         case Fettle.HttpCheckerBase.expected_status_code?(status_code, expected_status) do
           true ->
             run_compare_response_body(config.resp_body, resp, config)
+
           false ->
             Result.error("Unexpected status code #{status_code}.")
         end
       end
 
       @doc "choses the method used to compare the response body and executes it"
-      @spec run_compare_response_body(resp_body_opt :: any, resp :: HTTPoison.Response.t, config :: map) :: Result.t
+      @spec run_compare_response_body(
+              resp_body_opt :: any,
+              resp :: HTTPoison.Response.t(),
+              config :: map
+            ) :: Result.t()
       def run_compare_response_body(resp_body_opt, resp, config)
 
       def run_compare_response_body(nil, _resp, _config), do: Result.ok()
       def run_compare_response_body(false, _resp, _config), do: Result.ok()
-      def run_compare_response_body(fun, %HTTPoison.Response{headers: headers, body: body}, config) when is_function(fun, 3) do
+
+      def run_compare_response_body(
+            fun,
+            %HTTPoison.Response{headers: headers, body: body},
+            config
+          )
+          when is_function(fun, 3) do
         content_type = Fettle.HttpCheckerBase.get_header(headers, "content-type")
         fun.(content_type, body, config)
       end
-      def run_compare_response_body({mod, fun}, %HTTPoison.Response{headers: headers, body: body}, config) when is_atom(mod) and is_atom(fun) do
+
+      def run_compare_response_body(
+            {mod, fun},
+            %HTTPoison.Response{headers: headers, body: body},
+            config
+          )
+          when is_atom(mod) and is_atom(fun) do
         content_type = Fettle.HttpCheckerBase.get_header(headers, "content-type")
         apply(mod, fun, [content_type, body, config])
       end
-      def run_compare_response_body(expected_body, %HTTPoison.Response{headers: headers, body: body}, config) do
+
+      def run_compare_response_body(
+            expected_body,
+            %HTTPoison.Response{headers: headers, body: body},
+            config
+          ) do
         content_type = Fettle.HttpCheckerBase.get_header(headers, "content-type")
         compare_resp_body(content_type, body, expected_body, config)
       end
@@ -81,10 +118,16 @@ defmodule Fettle.HttpCheckerBase do
 
       Supported types for `expected_body` are: `String` or `Regex`, extensions of this module may implement others.
       """
-      @spec compare_resp_body(content_type :: String.t, body :: String.t, expected_body :: any, config :: map) :: Result.t
+      @spec compare_resp_body(
+              content_type :: String.t(),
+              body :: String.t(),
+              expected_body :: any,
+              config :: map
+            ) :: Result.t()
       def compare_resp_body(content_type, body, expected_body, config)
 
-      def compare_resp_body(_, body, expected_body, _config) when is_binary(body) and is_binary(expected_body) do
+      def compare_resp_body(_, body, expected_body, _config)
+          when is_binary(body) and is_binary(expected_body) do
         case String.equivalent?(body, expected_body) do
           true -> Result.ok()
           false -> Result.error("Unexpected response body.")
@@ -104,7 +147,9 @@ defmodule Fettle.HttpCheckerBase do
           nil ->
             system_code = Application.get_env(:fettle, :system_code, "fettle")
             [{"user-agent", system_code} | headers]
-          _ -> headers
+
+          _ ->
+            headers
         end
       end
 
@@ -125,7 +170,15 @@ defmodule Fettle.HttpCheckerBase do
       def init(opts) do
         opts[:url] || raise ArgumentError, "#{__MODULE__} Need check :url"
 
-        config = Enum.into(opts, %{headers: [], method: "GET", req_body: "", status_code: 200, httpoison: [], resp_body: nil})
+        config =
+          Enum.into(opts, %{
+            headers: [],
+            method: "GET",
+            req_body: "",
+            status_code: 200,
+            httpoison: [],
+            resp_body: nil
+          })
 
         headers = default_headers(config.headers)
 
@@ -134,8 +187,15 @@ defmodule Fettle.HttpCheckerBase do
 
       @doc "Call an HTTP(S) end-point and assert a response code/response body and return a `Fettle.Checker.Response`"
       @impl Fettle.Checker
-      def check(config = %{method: method, url: url, req_body: req_body, headers: headers, httpoison: httpoison_opts}) do
-
+      def check(
+            config = %{
+              method: method,
+              url: url,
+              req_body: req_body,
+              headers: headers,
+              httpoison: httpoison_opts
+            }
+          ) do
         result = HTTPoison.request(method, url, req_body, headers, httpoison_opts)
 
         case result do
@@ -143,7 +203,7 @@ defmodule Fettle.HttpCheckerBase do
             compare_response(resp, config)
 
           {:error, %HTTPoison.Error{reason: reason}} ->
-            Result.error(inspect reason)
+            Result.error(inspect(reason))
         end
       end
 
