@@ -3,7 +3,7 @@ defmodule FettleChecks.Mixfile do
 
   def project do
     [app: :fettle_checks,
-     version: "0.2.0",
+     version: "0.2.1",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -46,7 +46,7 @@ defmodule FettleChecks.Mixfile do
   defp deps do
     [
       # {:fettle, github: "Financial-Times/fettle"},
-      {:fettle, "~> 0.1"},
+      {:fettle, "~> 1.0 or ~> 0.1"},
       {:poison, "~> 3.1"},
       {:httpoison, "~> 0.11"},
       {:plug, "~> 1.3", only: [:test]},
