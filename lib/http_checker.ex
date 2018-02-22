@@ -121,6 +121,7 @@ defmodule Fettle.HttpCheckerBase do
       end
 
       @doc "check options and transform into a map, applying defaults as necessary"
+      @impl Fettle.Checker
       def init(opts) do
         opts[:url] || raise ArgumentError, "#{__MODULE__} Need check :url"
 
@@ -132,7 +133,7 @@ defmodule Fettle.HttpCheckerBase do
       end
 
       @doc "Call an HTTP(S) end-point and assert a response code/response body and return a `Fettle.Checker.Response`"
-      @impl true
+      @impl Fettle.Checker
       def check(config = %{method: method, url: url, req_body: req_body, headers: headers, httpoison: httpoison_opts}) do
 
         result = HTTPoison.request(method, url, req_body, headers, httpoison_opts)
