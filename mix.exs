@@ -2,17 +2,19 @@ defmodule FettleChecks.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :fettle_checks,
-     version: "0.2.0",
-     elixir: "~> 1.4",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     aliases: [test: "test --no-start"],
-     source_url: "https://github.com/Financial-Times/fettle_checks",
-     description: description(),
-     package: package(),
-     docs: docs(),
-     deps: deps()]
+    [
+      app: :fettle_checks,
+      version: "0.2.1",
+      elixir: "~> 1.4",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      aliases: [test: "test --no-start"],
+      source_url: "https://github.com/Financial-Times/fettle_checks",
+      description: description(),
+      package: package(),
+      docs: docs(),
+      deps: deps()
+    ]
   end
 
   # Configuration for the OTP application
@@ -27,7 +29,8 @@ defmodule FettleChecks.Mixfile do
     [
       maintainers: ["Ellis Pritchard"],
       licenses: ["MIT"],
-      links: %{"Github" => "https://github.com/Financial-Times/fettle_checks"} ]
+      links: %{"Github" => "https://github.com/Financial-Times/fettle_checks"}
+    ]
   end
 
   defp description do
@@ -37,8 +40,7 @@ defmodule FettleChecks.Mixfile do
   end
 
   def docs do
-    [main: "readme",
-     extras: ["README.md"]]
+    [main: "readme", extras: ["README.md"]]
   end
 
   # Dependencies can be Hex packages:
@@ -46,7 +48,7 @@ defmodule FettleChecks.Mixfile do
   defp deps do
     [
       # {:fettle, github: "Financial-Times/fettle"},
-      {:fettle, "~> 0.1"},
+      {:fettle, "~> 1.0 or ~> 0.1"},
       {:poison, "~> 3.1"},
       {:httpoison, "~> 0.11"},
       {:plug, "~> 1.3", only: [:test]},
