@@ -50,7 +50,7 @@ defmodule FettleChecks.Mixfile do
       # {:fettle, github: "Financial-Times/fettle"},
       {:fettle, "~> 1.0 or ~> 0.1"},
       {:poison, "~> 3.1"},
-      {:httpoison, "~> 0.11"},
+      {:httpoison, "~> 0.11 or ~> 1.0"},
       {:plug, "~> 1.3", only: [:test]},
       {:cowboy, "~> 1.0", only: [:test]},
       {:credo, "~> 0.5", only: [:dev, :test]},
