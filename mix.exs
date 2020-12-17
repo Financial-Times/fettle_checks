@@ -4,8 +4,8 @@ defmodule FettleChecks.Mixfile do
   def project do
     [
       app: :fettle_checks,
-      version: "0.2.2",
-      elixir: "~> 1.4",
+      version: "0.3.0",
+      elixir: "~> 1.11",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       aliases: [test: "test --no-start"],
@@ -48,16 +48,17 @@ defmodule FettleChecks.Mixfile do
   defp deps do
     [
       # {:fettle, github: "Financial-Times/fettle"},
-      {:fettle, "~> 1.0 or ~> 0.1"},
-      {:poison, "~> 3.1"},
-      {:httpoison, "~> 0.11 or ~> 1.0"},
-      {:plug, "~> 1.3", only: [:test]},
-      {:cowboy, "~> 1.0", only: [:test]},
-      {:credo, "~> 0.5", only: [:dev, :test]},
-      {:mix_test_watch, "~> 0.3", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.14", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
-      {:inch_ex, ">= 0.0.0", only: :docs}
+      {:fettle, github: "Financial-Times/fettle", tag: "v1.1.0"},
+      {:poison, "~> 4.0"},
+      {:httpoison, "~> 1.7"},
+      {:plug, "~> 1.11", only: [:test]},
+      {:plug_cowboy, "~> 2.4", only: [:test]},
+      {:cowboy, "~> 2.8", only: [:test]},
+      {:credo, "~> 1.5", only: [:dev, :test]},
+      {:mix_test_watch, "~> 1.0.2", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.23.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:inch_ex, "~> 2.0", only: :docs}
     ]
   end
 end

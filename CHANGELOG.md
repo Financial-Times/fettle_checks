@@ -1,3 +1,7 @@
+## 0.2.3
+
+* Upgrade Elixir and dependencies versions
+
 ## 0.2.1
 
 * Allow Fettle ~> 1.0 or ~> 0.1
